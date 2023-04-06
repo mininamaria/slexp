@@ -1,6 +1,9 @@
 import piexif
 import json
 import re
+import os
+import pathlib
+
 from PIL import Image
 import PIL.ExifTags
 from piexif import TAGS
@@ -35,15 +38,37 @@ thus it is to be made readable first.
 """
 
 
-def parse_dict(conv_dict, src_filename):
+def parse_dict(conv_dict, src_filename, d_path):
     regex = re.compile(".jpg")
-    dest_filename = regex.sub(".json", src_filename)
-    with open(dest_filename, "w") as f:
+    dest_filename = regex.sub(".json", src_filename)    # Creating a string
+    dest_file_path = os.path.join(d_path, str(dest_filename))  # Composing a filepath
+    with open(dest_file_path, "w") as f:
         f.write(json.dumps(conv_dict))
     print(dest_filename)
 
 
-exif_dictionary = piexif.load("IMG_20200702_124338.jpg")
-normal_dict = make_readable(exif_dictionary, ("GPS",))
-parse_dict(normal_dict, "IMG_20200702_124338.jpg")
+"""
+This code is going to work with directories
+"""
 
+def main():
+    cwd = os.getcwd()  # Get the current working directory
+    dest_path = pathlib.Path(os.path.join(cwd, "jsons"))  # Specifying the destination directory path
+    dest_path.mkdir(exist_ok=True)  # Making the directory for JSON files
+    src_path = pathlib.Path(str(input("Введите путь к директории с фотографиями")))  # This is our source path
+    # os.chdir(src_path)
+    if not src_path.is_dir():
+        print(f"{src_path} is not a directory")
+
+    for f in src_path.iterdir():
+        with open(f, "r") as file:
+            print("hey")
+        #   write things into the file
+
+    exif_dictionary = piexif.load("IMG_20200702_124338.jpg")
+    normal_dict = make_readable(exif_dictionary, ("GPS",))
+    parse_dict(normal_dict, "IMG_20200702_124338.jpg", dest_path)
+
+
+if __name__ == "__main__":
+    main()

@@ -34,6 +34,10 @@
 Пока никак
 
 
+# Источники
+Библиотека [Pillow](https://pillow.readthedocs.io/en/stable/reference/index.html)
+Библиотека [piexif](https://pypi.org/project/piexif/)
+
 
 ## Contributing
 
