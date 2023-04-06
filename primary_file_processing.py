@@ -40,34 +40,66 @@ thus it is to be made readable first.
 
 def parse_dict(conv_dict, src_filename, d_path):
     regex = re.compile(".jpg")
-    dest_filename = regex.sub(".json", src_filename)    # Creating a string
-    dest_file_path = os.path.join(d_path, str(dest_filename))  # Composing a filepath
-    with open(dest_file_path, "w") as f:
+    dst_filename = regex.sub(".json", src_filename)  # Creating a string
+    dst_file_path = os.path.join(d_path, str(dst_filename))  # Composing a filepath
+    with open(dst_file_path, "w") as f:
         f.write(json.dumps(conv_dict))
-    print(dest_filename)
+    return dst_filename
 
 
 """
 This code is going to work with directories
 """
+def mk_dst_dir():
+    cwd = os.getcwd()  # Get the current working directory
+    dst_path = pathlib.Path(os.path.join(cwd, "jsons"))  # Specifying the destination directory path
+    dst_path.mkdir(exist_ok=True)  # Making the directory for JSON files
+    return dst_path
+
+def mk_src_dir():
+    src_path = pathlib.Path(str(input("Введите путь к директории с фотографиями: ")))  # This is our source path
+    if not src_path.is_dir():
+       return None
+    else:
+       return src_path
+
+
+def log_init(src_path, dst_path):
+    log_path = pathlib.Path(os.path.join(dst_path, "log.txt"))  # Specifying the log file path
+    with open(log_path, "w") as log_f:
+        if src_path is None:
+            log_f.write(f"ERROR: {src_path} is not a directory\n")
+            return None
+        log_f.write(f"SOURCE DIRECTORY: {src_path}\n")
+        log_f.write(f"DESTINATION DIRECTORY: {dst_path}\n")
+        log_f.write(f"IMAGES:\n")
+    return log_path
+
 
 def main():
-    cwd = os.getcwd()  # Get the current working directory
-    dest_path = pathlib.Path(os.path.join(cwd, "jsons"))  # Specifying the destination directory path
-    dest_path.mkdir(exist_ok=True)  # Making the directory for JSON files
-    src_path = pathlib.Path(str(input("Введите путь к директории с фотографиями")))  # This is our source path
-    # os.chdir(src_path)
-    if not src_path.is_dir():
-        print(f"{src_path} is not a directory")
+    src_dir = mk_src_dir()
+    dst_dir = mk_dst_dir()
+    log_path = log_init(src_dir, dst_dir)
+    if log_path is None:
+        return
+    with open(log_path, "a") as log:
+        for f in src_dir.iterdir():
+            if f.suffix == ".jpg":
+                with open(f, "r") as file:
+                    log.write(f.name+"\n")
+                    exif_dictionary = piexif.load(str(f))
+                    normal_dict = make_readable(exif_dictionary, ("GPS",))
+                    if len(normal_dict) == 0:
+                        log.write("GPS data empty\n")
+                    else:
+                        json_path = parse_dict(normal_dict, str(f), dst_dir)
+                        log.write(f"{json_path}\n")
+            #   write things into the file
 
-    for f in src_path.iterdir():
-        with open(f, "r") as file:
-            print("hey")
-        #   write things into the file
 
-    exif_dictionary = piexif.load("IMG_20200702_124338.jpg")
-    normal_dict = make_readable(exif_dictionary, ("GPS",))
-    parse_dict(normal_dict, "IMG_20200702_124338.jpg", dest_path)
+
+
+
 
 
 if __name__ == "__main__":
