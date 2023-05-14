@@ -1,5 +1,8 @@
+from typing import List
+
 import piexif
 import json
+import geojson
 import re
 import os
 import pathlib
@@ -49,12 +52,17 @@ def parse_dict(conv_dict, src_filename, dst_path):
     :return: dst_filename
     """
     regex = re.compile(".jpg")
-    dst_filename = regex.sub(".json", src_filename)  # Creating a string
+    dst_filename = regex.sub(".json", os.path.basename(src_filename))  # Creating a string
     dst_file_path = os.path.join(dst_path, str(dst_filename))  # Composing a filepath
+
     with open(dst_file_path, "w") as f:
         f.write(json.dumps(conv_dict))  # Creating a JSON and writing it to our file
     return dst_filename
 
+
+"""
+This code is going to work with directories
+"""
 
 def mk_dst_dir():
     """
@@ -79,7 +87,24 @@ def mk_src_dir():
     else:
         return src_path
 
+'''
+The following code calculates decimal degrees for coordinates
+'''
 
+
+def countitude(crds: List[List[int]]):
+    result = crds[0][0] + crds[1][0]/60 + crds[2][0]/(10000*3600)
+    return round(result, 2)
+
+
+def parse_geo(data_dict, src_filename, d_path):
+    print("Ready to parse!")
+    regex = re.compile(".jpg")
+    dst_filename = regex.sub(".json", os.path.basename(src_filename))  # Creating a string
+    dst_file_path = os.path.join(d_path, str(dst_filename))  # Composing a filepath
+    with open(dst_file_path, "w") as f:
+        f.write(json.dumps(data_dict))
+    return dst_filename
 def log_init(src_path, dst_path):
     """
     This initializes our log: it remembers everything
@@ -103,7 +128,9 @@ def log_init(src_path, dst_path):
 
 def main():
     src_dir = mk_src_dir()
+    print(str(src_dir))  # DEBUG
     dst_dir = mk_dst_dir()
+    print(str(dst_dir))  # DEBUG
     log_path = log_init(src_dir, dst_dir)
     if log_path is None:
         return
@@ -115,10 +142,12 @@ def main():
                     exif_dictionary = piexif.load(str(f))
                     normal_dict = make_readable(exif_dictionary, ("GPS",))
                     if len(normal_dict) == 0:
-                        log.write("\tGPS data empty\n")
-                    else:
-                        json_path = parse_dict(normal_dict, f.name, dst_dir)
-                        log.write(f"\t{json_path}\n")
+                        log.write("GPS data empty\n")
+                    else:  # "basename" returns the filename stripped off its path
+                        json_path = parse_dict(normal_dict, f, dst_dir)
+                        log.write(f"{json_path}\n")
+            #   write things into the file
+
 
 
 if __name__ == "__main__":
