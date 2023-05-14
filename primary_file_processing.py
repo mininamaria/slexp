@@ -3,15 +3,81 @@ import json
 import re
 import os
 import pathlib
+from typing import List, Dict, Tuple
 
 from PIL import Image
 import PIL.ExifTags
 from piexif import TAGS
 
 
+def countitude(crds: List[List[int]]) -> float:
+    """
+    calculating latitude or longitude
+
+    :param crds: integer values from GPSLongitude or GPSLatitude in degrees, minutes and seconds
+    :return: double: decimal degrees
+    """
+    result = crds[0][0] + crds[1][0] / 60 + crds[2][0] / (10000 * 3600)
+    return round(result, 3)
+
+
+def altitude(crds: Tuple[int, int]) -> int:
+    """
+    calculating altitude
+
+    :param crds: integer values from GPSAltitude
+    :return : integer value: meters above sea level
+    """
+    result = crds[0] / 1000
+    return round(result)
+
+
+def time_stamp(crds: Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]) -> str:
+    """
+    reformatting time
+
+    :param crds: integer values from GPSTimeStamp
+    :return : string: hh:mm:ss
+    """
+    return f"{str(crds[0][0])}:{str(crds[1][0])}:{str(crds[2][0])}"
+
+
+def prepare_geo(n_dict: Dict) -> Dict:
+    """
+    preparing GPS data to be parsed to GeoJSON
+
+    :param n_dict: readable dictionary (no byte values)
+    :return geo_data: dictionary ready to be parsed to GeoJSON (point)
+
+    NB: normalized dictionary must not contain any byte values, thus it is to use make_readable() first
+    """
+
+    coordinates = [countitude(n_dict.get("GPSLatitude")),
+                   countitude(n_dict.get("GPSLongitude")),
+                   altitude(n_dict.get("GPSAltitude"))]
+    geometry = {"type": "Point",
+                "coordinates": coordinates}
+
+    date = n_dict.get("GPSDateStamp")  # parsing date
+    time = time_stamp(n_dict.get("GPSTimeStamp"))  # parsing time
+    properties = {"date": date,
+                  "time": time,
+                  "tags": []}
+
+    features = [{"type": "Feature",
+                 "geometry": geometry,
+                 "properties": properties}]
+
+    geo_data = {"type": "FeatureCollection",
+                "features": features}
+
+    return geo_data
+
+
 def make_readable(exif_dict, params):
     """
-    preparing to parse a JSON.
+    processing EXIF data to make them readable
+
     tags: IDs -> names,
     values: bytes -> str
 
@@ -23,42 +89,59 @@ def make_readable(exif_dict, params):
     """
     readable_dict = {}
     str_name = "name"
+
     for ifd in params:
         for tag in exif_dict[ifd]:
+
             tag_k = piexif.TAGS[ifd][tag][str_name]
             # the following code turns bytes to str, because otherwise it is impossible to parse a json
             if type(exif_dict[ifd][tag]) == bytes:
                 tag_val = exif_dict[ifd][tag].decode()
             else:
                 tag_val = exif_dict[ifd][tag]
+
             readable_dict.update({tag_k: tag_val})
+
     return readable_dict
 
 
-def parse_dict(conv_dict, src_filename, dst_path):
+def mk_json(conv_dict, src_filename, dst_path):
     """
-    This piece of code is responsible for parsing a JSON:
-    we put all the info about an image to a JSON file with its name.
+    parsing JSON to a separate file
 
     :param dict conv_dict:  a dictionary of exif data with no byte values,
     :param str src_filename: only the name, no path. E.g. IMG001.jpg,
-    :param Path dst_path: path to the directory for storing JSON files. Check out mr_dst_dir()/
-
-    NB: our convertible dictionary must not contain any byte values, thus it is to use make_readable() first.
-
+    :param Path dst_path: path to the directory for storing JSON files. Check out mr_dst_dir()
     :return: dst_filename
     """
     regex = re.compile(".jpg")
+
     dst_filename = regex.sub(".json", src_filename)  # Creating a string
     dst_file_path = os.path.join(dst_path, str(dst_filename))  # Composing a filepath
+
     with open(dst_file_path, "w") as f:
         f.write(json.dumps(conv_dict))  # Creating a JSON and writing it to our file
+
     return dst_filename
+
+
+def mk_geojson(json_filename):
+    """
+    rewriting JSON file with GeoJSON
+
+    :param json_filename:
+    """
+
+    with open(json_filename, "r") as f:
+        j = json.loads(f.read())  # Creating a JSON and writing it to our file
+
+    with open(json_filename, "w") as f:
+        f.write(json.dumps(prepare_geo(j)))  # Creating a JSON and writing it to our file
 
 
 def mk_dst_dir():
     """
-    This makes the destination directory
+    making destination directory
 
     :return: dst_path
     """
@@ -70,7 +153,8 @@ def mk_dst_dir():
 
 def mk_src_dir():
     """
-    This finds and checks the source directory
+    finding and checking source directory
+
     :return: src_path
     """
     src_path = pathlib.Path(str(input("Введите путь к директории с фотографиями: ")))  # This is our source path
@@ -82,13 +166,14 @@ def mk_src_dir():
 
 def log_init(src_path, dst_path):
     """
-    This initializes our log: it remembers everything
-    and enables the user to see what has happened.
-    Very useful when it comes to errors and failures.
+    initializing log
 
     :type src_path:  Path
     :type dst_path:  Path
     :return: log_path
+
+    Log remembers everything and enables the user to see what has happened.
+    Very useful when it comes to errors and failures.
     """
     log_path = pathlib.Path(os.path.join(dst_path, "log.txt"))  # Specifying the log file path
     with open(log_path, "w") as log_f:
@@ -117,7 +202,8 @@ def main():
                     if len(normal_dict) == 0:
                         log.write("\tGPS data empty\n")
                     else:
-                        json_path = parse_dict(normal_dict, f.name, dst_dir)
+                        json_path = mk_json(normal_dict, f.name, dst_dir)
+                        mk_geojson(os.path.join(dst_dir, json_path))
                         log.write(f"\t{json_path}\n")
 
 
