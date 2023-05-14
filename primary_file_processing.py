@@ -11,19 +11,25 @@ from PIL import Image
 import PIL.ExifTags
 from piexif import TAGS
 
-"""   
-this function converts incomprehensible tag IDs to 
-adequate tag names and turns any bytes values to strings,
-because otherwise it is impossible to parse a json
-"""
-
 
 def make_readable(exif_dict, params):
+    """
+    preparing to parse a JSON.
+    tags: IDs -> names,
+    values: bytes -> str
+
+    :param dict exif_dict:  a dictionary of exif data,
+    :param tuple(str) params: the parameters we want to get, e.g. GPS
+
+    :return readable_dict:
+
+    """
     readable_dict = {}
     str_name = "name"
     for ifd in params:
         for tag in exif_dict[ifd]:
             tag_k = piexif.TAGS[ifd][tag][str_name]
+            # the following code turns bytes to str, because otherwise it is impossible to parse a json
             if type(exif_dict[ifd][tag]) == bytes:
                 tag_val = exif_dict[ifd][tag].decode()
             else:
@@ -32,21 +38,25 @@ def make_readable(exif_dict, params):
     return readable_dict
 
 
-"""
-This piece of code is responsible for parsing a JSON:
-we put all the info about an image to a JSON file with its name.
-NB1: we are using JPG files.
-NB2: our convertible dictionary must not contain any byte values,
-thus it is to be made readable first.
-"""
+def parse_dict(conv_dict, src_filename, dst_path):
+    """
+    This piece of code is responsible for parsing a JSON:
+    we put all the info about an image to a JSON file with its name.
 
+    :param dict conv_dict:  a dictionary of exif data with no byte values,
+    :param str src_filename: only the name, no path. E.g. IMG001.jpg,
+    :param Path dst_path: path to the directory for storing JSON files. Check out mr_dst_dir()/
 
-def parse_dict(conv_dict, src_filename, d_path):
+    NB: our convertible dictionary must not contain any byte values, thus it is to use make_readable() first.
+
+    :return: dst_filename
+    """
     regex = re.compile(".jpg")
     dst_filename = regex.sub(".json", os.path.basename(src_filename))  # Creating a string
-    dst_file_path = os.path.join(d_path, str(dst_filename))  # Composing a filepath
+    dst_file_path = os.path.join(dst_path, str(dst_filename))  # Composing a filepath
+
     with open(dst_file_path, "w") as f:
-        f.write(json.dumps(conv_dict))
+        f.write(json.dumps(conv_dict))  # Creating a JSON and writing it to our file
     return dst_filename
 
 
@@ -54,21 +64,28 @@ def parse_dict(conv_dict, src_filename, d_path):
 This code is going to work with directories
 """
 
-
 def mk_dst_dir():
-    cwd = os.getcwd()  # Get the current working directory
+    """
+    This makes the destination directory
+
+    :return: dst_path
+    """
+    cwd = os.getcwd()  # Getting the current working directory
     dst_path = pathlib.Path(os.path.join(cwd, "jsons"))  # Specifying the destination directory path
     dst_path.mkdir(exist_ok=True)  # Making the directory for JSON files
     return dst_path
 
 
 def mk_src_dir():
+    """
+    This finds and checks the source directory
+    :return: src_path
+    """
     src_path = pathlib.Path(str(input("Введите путь к директории с фотографиями: ")))  # This is our source path
-    if not src_path.is_dir():
+    if not src_path.is_dir():  # Checking whether the entered value is a directory
         return None
     else:
         return src_path
-
 
 '''
 The following code calculates decimal degrees for coordinates
@@ -89,13 +106,22 @@ def parse_geo(data_dict, src_filename, d_path):
         f.write(json.dumps(data_dict))
     return dst_filename
 def log_init(src_path, dst_path):
+    """
+    This initializes our log: it remembers everything
+    and enables the user to see what has happened.
+    Very useful when it comes to errors and failures.
+
+    :type src_path:  Path
+    :type dst_path:  Path
+    :return: log_path
+    """
     log_path = pathlib.Path(os.path.join(dst_path, "log.txt"))  # Specifying the log file path
     with open(log_path, "w") as log_f:
         if src_path is None:
             log_f.write(f"ERROR: {src_path} is not a directory\n")
             return None
-        log_f.write(f"SOURCE DIRECTORY: {src_path}\n")
-        log_f.write(f"DESTINATION DIRECTORY: {dst_path}\n")
+        log_f.write(f"SRC: {src_path}\n")
+        log_f.write(f"DST: {dst_path}\n")
         log_f.write(f"IMAGES:\n")
     return log_path
 
@@ -121,6 +147,7 @@ def main():
                         json_path = parse_dict(normal_dict, f, dst_dir)
                         log.write(f"{json_path}\n")
             #   write things into the file
+
 
 
 if __name__ == "__main__":
