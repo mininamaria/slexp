@@ -17,6 +17,8 @@ def countitude(crds: List[List[int]]) -> float:
     :param crds: integer values from GPSLongitude or GPSLatitude in degrees, minutes and seconds
     :return: double: decimal degrees
     """
+    if crds is None:
+        return 0
     result = crds[0][0] + crds[1][0] / 60 + crds[2][0] / (10000 * 3600)
     return round(result, 3)
 
@@ -28,6 +30,8 @@ def altitude(crds: Tuple[int, int]) -> int:
     :param crds: integer values from GPSAltitude
     :return : integer value: meters above sea level
     """
+    if crds is None:
+        return 0
     result = crds[0] / 1000
     return round(result)
 
@@ -39,6 +43,8 @@ def time_stamp(crds: Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]) -
     :param crds: integer values from GPSTimeStamp
     :return : string: hh:mm:ss
     """
+    if crds is None:
+        return "unknown"
     return f"{str(crds[0][0])}:{str(crds[1][0])}:{str(crds[2][0])}"
 
 
@@ -55,6 +61,8 @@ def prepare_geo(n_dict: Dict) -> Dict:
     coordinates = [countitude(n_dict.get("GPSLatitude")),
                    countitude(n_dict.get("GPSLongitude")),
                    altitude(n_dict.get("GPSAltitude"))]
+    #if coordinates == [0, 0, 0]:
+       # coordinates = get from place
     geometry = {"type": "Point",
                 "coordinates": coordinates}
 
@@ -62,6 +70,7 @@ def prepare_geo(n_dict: Dict) -> Dict:
     time = time_stamp(n_dict.get("GPSTimeStamp"))  # parsing time
     properties = {"date": date,
                   "time": time,
+                  "place": "",
                   "tags": []}
 
     features = [{"type": "Feature",
