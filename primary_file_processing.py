@@ -219,7 +219,7 @@ def main():
     # register_heif_opener()
     with open(log_path, "a") as log:
         for f in src_dir.iterdir():
-            if f.suffix == ".jpg" or f.suffix == ".HEIC":
+            if f.suffix == ".jpg" or f.suffix == ".JPG" or f.suffix == ".jpeg":
                 with open(f, "r") as file:
                     log.write(f.name + "\n")
                     exif_dictionary = piexif.load(str(f))
