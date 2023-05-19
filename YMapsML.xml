@@ -1,0 +1,29 @@
+<?xml  version="1.0" encoding="utf-8"?>
+<ymaps:ymaps xmlns:ymaps="http://maps.yandex.ru/ymaps/1.x"
+             xmlns:repr="http://maps.yandex.ru/representation/1.x"
+             xmlns:gml="http://www.opengis.net/gml"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://maps.yandex.ru/schemas/ymaps/1.x/ymaps.xsd">
+    <repr:Representation>
+        <repr:Style gml:id="my_img">
+            <repr:iconStyle>
+                <repr:href>https://raw.githubusercontent.com/SofyaVikhlyantseva/YMapsML-for-slexp/main/image_commonStyle.jpg</repr:href>
+                <repr:size x="54" y="42"></repr:size>
+                <repr:offset x="-27" y="-16"></repr:offset>
+            </repr:iconStyle>
+        </repr:Style>
+    </repr:Representation>
+
+    <ymaps:GeoObjectCollection>
+        <gml:featureMember>
+            <ymaps:GeoObject>
+                <ymaps:style>#my_img</ymaps:style>
+                <gml:name>Кавказ</gml:name>
+                <gml:description>Красивая природа</gml:description>
+                <gml:Point>
+                    <gml:pos>37.561598 55.692394</gml:pos>
+                </gml:Point>
+            </ymaps:GeoObject>
+        </gml:featureMember>
+    </ymaps:GeoObjectCollection>
+</ymaps:ymaps>
