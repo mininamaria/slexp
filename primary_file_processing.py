@@ -5,7 +5,6 @@ import os
 import pathlib
 from typing import List, Dict, Tuple
 
-from PIL import Image
 import PIL.ExifTags
 from piexif import TAGS
 
@@ -48,6 +47,15 @@ def time_stamp(crds: Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]) -
     return f"{str(crds[0][0])}:{str(crds[1][0])}:{str(crds[2][0])}"
 
 
+def prepare_crds(n_dict: Dict) -> List:
+    coordinates = [countitude(n_dict.get("GPSLatitude")),
+                   countitude(n_dict.get("GPSLongitude")),
+                   altitude(n_dict.get("GPSAltitude"))]
+    # if coordinates == [0, 0, 0]:
+    # coordinates = get from place
+    return coordinates
+
+
 def prepare_geo(n_dict: Dict) -> Dict:
     """
     preparing GPS data to be parsed to GeoJSON
@@ -58,13 +66,8 @@ def prepare_geo(n_dict: Dict) -> Dict:
     NB: normalized dictionary must not contain any byte values, thus it is to use make_readable() first
     """
 
-    coordinates = [countitude(n_dict.get("GPSLatitude")),
-                   countitude(n_dict.get("GPSLongitude")),
-                   altitude(n_dict.get("GPSAltitude"))]
-    #if coordinates == [0, 0, 0]:
-       # coordinates = get from place
     geometry = {"type": "Point",
-                "coordinates": coordinates}
+                "coordinates": prepare_crds(n_dict)}
 
     date = n_dict.get("GPSDateStamp")  # parsing date
     time = time_stamp(n_dict.get("GPSTimeStamp"))  # parsing time
@@ -79,7 +82,6 @@ def prepare_geo(n_dict: Dict) -> Dict:
 
     geo_data = {"type": "FeatureCollection",
                 "features": features}
-
     return geo_data
 
 
@@ -123,7 +125,7 @@ def mk_json(conv_dict, src_filename, dst_path):
     :param Path dst_path: path to the directory for storing JSON files. Check out mr_dst_dir()
     :return: dst_filename
     """
-    regex = re.compile(".jpg")
+    regex = re.compile(str(pathlib.Path(src_filename).suffix))
 
     dst_filename = regex.sub(".json", src_filename)  # Creating a string
     dst_file_path = os.path.join(dst_path, str(dst_filename))  # Composing a filepath
@@ -195,15 +197,29 @@ def log_init(src_path, dst_path):
     return log_path
 
 
+def mk_crds(src_filename, dst_dir, n_dict):
+    regex = re.compile(str(pathlib.Path(src_filename).suffix))
+    dst_filename = regex.sub(".txt", src_filename)  # Creating a string
+    dst_path = os.path.join(dst_dir, pathlib.Path(dst_filename))
+    crds = prepare_crds(n_dict)
+    date = n_dict.get("GPSDateStamp")  # parsing date
+    with open(dst_path, "w") as f:
+        f.write(f"{crds[0]}, {crds[1]}, {crds[2]}\n")
+        if date is not None:
+            f.write(date[:4])
+    return dst_path
+
+
 def main():
     src_dir = mk_src_dir()
     dst_dir = mk_dst_dir()
     log_path = log_init(src_dir, dst_dir)
     if log_path is None:
         return
+    # register_heif_opener()
     with open(log_path, "a") as log:
         for f in src_dir.iterdir():
-            if f.suffix == ".jpg":
+            if f.suffix == ".jpg" or f.suffix == ".HEIC":
                 with open(f, "r") as file:
                     log.write(f.name + "\n")
                     exif_dictionary = piexif.load(str(f))
@@ -214,6 +230,7 @@ def main():
                         json_path = mk_json(normal_dict, f.name, dst_dir)
                         mk_geojson(os.path.join(dst_dir, json_path))
                         log.write(f"\t{json_path}\n")
+                        mk_crds(json_path, dst_dir, normal_dict)
 
 
 if __name__ == "__main__":
