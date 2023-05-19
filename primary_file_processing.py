@@ -238,7 +238,7 @@ def main():
                 expedition = str(d.name)
                 for f in d.iterdir():
                     if f.suffix == ".jpg" or f.suffix == ".JPG" or f.suffix == ".jpeg":
-                        with open(f, "r") as file:
+                        with open(f, "r"):
                             log.write(f.name + "\n")
                             exif_dictionary = piexif.load(str(f))
                             normal_dict = make_readable(exif_dictionary, ("GPS",))
