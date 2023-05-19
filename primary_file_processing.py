@@ -1,12 +1,9 @@
-import piexif
 import json
 import re
 import os
 import pathlib
+import piexif
 from typing import List, Dict, Tuple
-
-import PIL.ExifTags
-from piexif import TAGS
 
 
 def countitude(crds: List[List[int]]) -> float:
@@ -56,10 +53,11 @@ def prepare_crds(n_dict: Dict) -> List:
     return coordinates
 
 
-def prepare_geo(n_dict: Dict) -> Dict:
+def prepare_geo(n_dict: Dict, exp_name) -> Dict:
     """
     preparing GPS data to be parsed to GeoJSON
 
+    :param exp_name: name of the expedition
     :param n_dict: readable dictionary (no byte values)
     :return geo_data: dictionary ready to be parsed to GeoJSON (point)
 
@@ -74,6 +72,7 @@ def prepare_geo(n_dict: Dict) -> Dict:
     properties = {"date": date,
                   "time": time,
                   "place": "",
+                  "expedition": exp_name,
                   "tags": []}
 
     features = [{"type": "Feature",
@@ -136,18 +135,21 @@ def mk_json(conv_dict, src_filename, dst_path):
     return dst_filename
 
 
-def mk_geojson(json_filename):
+def mk_geojson(json_filename, expedition):
     """
     rewriting JSON file with GeoJSON
 
+    :param expedition: expedition name
     :param json_filename:
+
+    NB: expedition name has to be decoded, bc it is cyrillic
     """
 
     with open(json_filename, "r") as f:
         j = json.loads(f.read())  # Creating a JSON and writing it to our file
 
     with open(json_filename, "w") as f:
-        f.write(json.dumps(prepare_geo(j)))  # Creating a JSON and writing it to our file
+        f.write(json.dumps(prepare_geo(j, expedition)))  # Creating a JSON and writing it to our file
 
 
 def mk_dst_dir():
@@ -162,13 +164,25 @@ def mk_dst_dir():
     return dst_path
 
 
+def mk_crds_dir():
+    """
+        making destination directory for coordinates
+
+        :return: crds_path
+        """
+    cwd = os.getcwd()  # Getting the current working directory
+    crds_path = pathlib.Path(os.path.join(cwd, "crds"))  # Specifying the destination directory path
+    crds_path.mkdir(exist_ok=True)  # Making the directory for JSON files
+    return crds_path
+
+
 def mk_src_dir():
     """
     finding and checking source directory
 
     :return: src_path
     """
-    src_path = pathlib.Path(str(input("Введите путь к директории с фотографиями: ")))  # This is our source path
+    src_path = pathlib.Path("photos_from_hse_ling_expeditions")  # This is our source path
     if not src_path.is_dir():  # Checking whether the entered value is a directory
         return None
     else:
@@ -213,24 +227,28 @@ def mk_crds(src_filename, dst_dir, n_dict):
 def main():
     src_dir = mk_src_dir()
     dst_dir = mk_dst_dir()
+    crds_dir = mk_crds_dir()
     log_path = log_init(src_dir, dst_dir)
     if log_path is None:
         return
     # register_heif_opener()
     with open(log_path, "a") as log:
-        for f in src_dir.iterdir():
-            if f.suffix == ".jpg" or f.suffix == ".JPG" or f.suffix == ".jpeg":
-                with open(f, "r") as file:
-                    log.write(f.name + "\n")
-                    exif_dictionary = piexif.load(str(f))
-                    normal_dict = make_readable(exif_dictionary, ("GPS",))
-                    if len(normal_dict) == 0:
-                        log.write("\tGPS data empty\n")
-                    else:
-                        json_path = mk_json(normal_dict, f.name, dst_dir)
-                        mk_geojson(os.path.join(dst_dir, json_path))
-                        log.write(f"\t{json_path}\n")
-                        mk_crds(json_path, dst_dir, normal_dict)
+        for d in src_dir.iterdir():
+            if d.is_dir():
+                expedition = str(d.name)
+                for f in d.iterdir():
+                    if f.suffix == ".jpg" or f.suffix == ".JPG" or f.suffix == ".jpeg":
+                        with open(f, "r") as file:
+                            log.write(f.name + "\n")
+                            exif_dictionary = piexif.load(str(f))
+                            normal_dict = make_readable(exif_dictionary, ("GPS",))
+                            if len(normal_dict) == 0:
+                                log.write("\tGPS data empty\n")
+                            else:
+                                json_path = mk_json(normal_dict, f.name, dst_dir)
+                                mk_geojson(os.path.join(dst_dir, json_path), str(expedition))
+                                log.write(f"\t{json_path}\n")
+                                mk_crds(json_path, crds_dir, normal_dict)
 
 
 if __name__ == "__main__":
