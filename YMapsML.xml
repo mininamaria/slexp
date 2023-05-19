@@ -18,7 +18,7 @@
         <gml:featureMember>
             <ymaps:GeoObject>
                 <ymaps:style>#my_img</ymaps:style>
-                <gml:name>Природа</gml:name>
+                <gml:name>Кавказ</gml:name>
                 <gml:description>Красивая природа</gml:description>
                 <gml:Point>
                     <gml:pos>37.561598 55.692394</gml:pos>
