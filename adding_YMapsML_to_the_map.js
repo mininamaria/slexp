@@ -10,7 +10,7 @@ function init () {
         });
 
     // Загрузка YMapsML-файла.
-    ymaps.geoXml.load('draft.xml')
+    ymaps.geoXml.load('YMapsML.xml')
         .then(function (res) {
             // Добавление геообъектов на карту.
             myMap.geoObjects.add(res.geoObjects);
