@@ -1,21 +1,21 @@
-// Создание обработчика для события window.onLoad
-YMaps.jQuery(function () {
-    // Создание экземпляра карты и его привязка к созданному контейнеру
-    var map = new YMaps.Map(YMaps.jQuery("#YMapsID")[0]);
+ymaps.ready(init);
 
-    // Установка для карты ее центра и масштаба
-    map.setCenter(new YMaps.GeoPoint(43.998779,56.316537), 13);
+function init () {
+    // Создание экземпляра карты.
+    var myMap = new ymaps.Map('map', {
+            center: [61.678423, 96.377965],
+            zoom: 2
+        }, {
+            searchControlProvider: 'yandex#search'
+        });
 
-	map.addControl(new YMaps.Zoom());
-	map.addControl(new YMaps.TypeControl());
-	map.addControl(new YMaps.ToolBar());
-
-    // Создание и добавление YMapsML-документа на карту
-    var ml = new YMaps.YMapsML("https://github.com/mininamaria/slexp/blob/main/YMapsML.xml");
-    map.addOverlay(ml);
-
-    // Обработчик неудачной загрузки YMapsML
-    YMaps.Events.observe(ml, ml.Events.Fault, function (ml, error) {
-        alert('Ошибка: ' + error);
-    });
-});
+    // Загрузка YMapsML-файла.
+    ymaps.geoXml.load('draft.xml')
+        .then(function (res) {
+            // Добавление геообъектов на карту.
+            myMap.geoObjects.add(res.geoObjects);
+           // Вызывается в случае неудачной загрузки YMapsML-файла.
+        }, function (error){
+            alert('Ошибка: ' + error);
+        });
+}
